@@ -160,6 +160,10 @@ def checkpoint(intent: str) -> str:
     Use this after completing a logical unit of work to "save" your progress semantically.
     This squashes recent [AUTO-TRJ] snapshots into a single commit.
 
+    IMPORTANT: This action ONLY affects the shadow repository (.trajectory).
+    It does NOT create a commit in the main project's git history.
+    You must still commit your changes to the main project separately if desired.
+
     Args:
         intent: A clear, past-tense description of what was accomplished (e.g., "Refactored auth middleware").
 

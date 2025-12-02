@@ -60,6 +60,7 @@ You are connected to a "Code Trajectory" server that tracks the evolutionary his
     - When you have successfully completed a task or feature, you MUST call `checkpoint(summary)`.
     - **WARNING:** Do NOT call `checkpoint` if you are still debugging or experimenting. Only checkpoint stable, working states.
     - This action squashes your intermediate "trial & error" snapshots into a permanent history log.
+    - **IMPORTANT:** This ONLY affects the shadow repo. You must still commit to the main repo separately.
 
 4.  **CONTEXT AWARENESS:**
     - If you encounter a revert or a failed attempt in the trajectory (marked as `[Revert Detected]`), acknowledge it and do not repeat the same mistake.

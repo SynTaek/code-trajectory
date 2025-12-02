@@ -126,6 +126,7 @@ As an agent, you should follow this loop to maintain high-quality context:
     *   *Effect:* This squashes all the noisy `[AUTO-TRJ]` snapshots into a single, clean commit with your message.
     *   *Benefit:* It keeps the history clean while preserving the "thought process" during the work phase.
     *   **⚠️ Best Practice:** Only checkpoint when you are **DONE** with a feature. If you checkpoint while still debugging, you lose the detailed history of what you tried and failed.
+    *   **Note:** Checkpointing does NOT create a commit in your main project's git history. It only organizes the shadow history.
 
 ### 3. Context Retrieval Tools
 Use these tools to understand the codebase before making changes:
