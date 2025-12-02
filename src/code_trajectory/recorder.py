@@ -175,7 +175,11 @@ class Recorder:
             self.repo.git.commit("-m", commit_message)
 
             logger.info(f"Created checkpoint: {commit_message}")
-            return f"Successfully created checkpoint: '{intent}' (Squashed {auto_trj_count} snapshots)"
+            return (
+                f"Successfully created checkpoint: '{intent}' (Squashed {auto_trj_count} snapshots).\n"
+                "NOTE: This checkpoint is saved in the shadow repository (.trajectory) ONLY.\n"
+                "You must still commit your changes to the main project git repository separately."
+            )
 
         except Exception as e:
             logger.error(f"Error creating checkpoint: {e}")
