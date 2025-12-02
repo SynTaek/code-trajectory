@@ -47,7 +47,8 @@ Add the following rules to your System Prompt to enforce the use of Code Traject
 You are connected to a "Code Trajectory" server that tracks the evolutionary history of the codebase. You MUST follow these rules to maintain context and history hygiene:
 
 1.  **INITIALIZATION (Must Do):**
-    - At the very beginning of a session, you MUST call `get_session_summary()` to understand the previous work context.
+    - At the very beginning of a session, you MUST call `configure_project(path="/absolute/path/to/project")` to initialize the server.
+    - Then, call `get_session_summary()` to understand the previous work context.
     - If you are unsure about a file's state, call `get_file_trajectory(filepath)` BEFORE editing it.
 
 2.  **INTENT DECLARATION:**

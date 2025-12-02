@@ -8,7 +8,7 @@ The **Code Trajectory MCP System** acts as a bridge between a developer's local 
 ### 2.1. The Watcher (Background Service)
 * **Role:** Monitors the file system for changes.
 * **Behavior:**
-    * **Auto-Start:** Starts automatically on server startup, watching the current working directory (or specified path).
+    * **Auto-Start:** Starts automatically when `configure_project` is called.
     * Triggers on `FileModified` events.
     * **Debouncing:** Implements a debounce mechanism (e.g., 2.0 seconds) to prevent spamming snapshots during rapid typing/saving.
     * **Scope:** Respects `.gitignore` rules to avoid tracking build artifacts or sensitive environment files.
@@ -68,7 +68,7 @@ The **Code Trajectory MCP System** acts as a bridge between a developer's local 
 * **Function:**
     * Identifies contiguous `[AUTO-TRJ]` commits (including root commits if applicable).
     * Squashes them into a single commit with the prefix `[CHECKPOINT]` and the provided intent.
-    * **Auto-Config:** If the server is not configured, it automatically configures to the current working directory.
+    * **Constraint:** Requires server to be configured via `configure_project`.
 
 ### 3.5. Tool: `set_trajectory_intent`
 **Goal:** Capture the "Why" behind the changes.

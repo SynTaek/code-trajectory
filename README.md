@@ -78,7 +78,8 @@ Add the following to your `claude_desktop_config.json`:
   }
 }
 ```
-> **Note:** The `--path` argument is optional. If omitted, the server **automatically defaults to the current working directory**.
+> **Important:** You MUST provide the `--path` argument pointing to your project root. If omitted, the server will require an explicit `configure_project` call before functionality is available.
+
 
 ### Gemini (Google AI Studio / Vertex AI)
 
@@ -108,8 +109,11 @@ If you are using the MCP extension in **VSCode**, **Cursor**, **Windsurf**, **An
 
 This MCP server is designed to be a "Context Partner" for AI Agents. Here is the recommended workflow for agents:
 
-### 1. Initialization (Auto-Config)
-The server automatically configures itself to the current working directory on startup. You do **not** need to call `configure_project` unless you want to switch to a different project path.
+### 1. Initialization (Configuration)
+The server does **not** auto-configure. You MUST call `configure_project` at the start of a session.
+
+1.  **Action:** Call `configure_project(path="/absolute/path/to/project")`.
+2.  **Result:** The server initializes the recorder and watcher for that path.
 
 ### 2. The "Flow" Loop
 As an agent, you should follow this loop to maintain high-quality context:

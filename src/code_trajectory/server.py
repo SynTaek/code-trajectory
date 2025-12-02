@@ -110,6 +110,7 @@ def get_file_trajectory(filepath: str, depth: int = 5) -> str:
     error = _check_configured()
     if error:
         return error
+    assert state.trajectory is not None
     return state.trajectory.get_file_trajectory(filepath, depth)
 
 
@@ -129,6 +130,7 @@ def get_global_trajectory(time_window_minutes: int = 30) -> str:
     error = _check_configured()
     if error:
         return error
+    assert state.trajectory is not None
     return state.trajectory.get_global_trajectory(time_window_minutes)
 
 
@@ -145,6 +147,7 @@ def get_session_summary() -> str:
     error = _check_configured()
     if error:
         return error
+    assert state.trajectory is not None
     return state.trajectory.get_session_summary()
 
 
@@ -164,6 +167,7 @@ def checkpoint(intent: str) -> str:
     error = _check_configured()
     if error:
         return error
+    assert state.recorder is not None
     return state.recorder.checkpoint(intent)
 
 
@@ -183,6 +187,7 @@ def set_trajectory_intent(intent: str) -> str:
     error = _check_configured()
     if error:
         return error
+    assert state.recorder is not None
     state.recorder.set_intent(intent)
     return f"Intent set to: '{intent}' (Valid for 5 minutes)"
 

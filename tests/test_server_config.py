@@ -1,7 +1,5 @@
 # SPDX-License-Identifier: MIT
-import os
-from unittest.mock import patch, MagicMock
-import pytest
+from unittest.mock import patch
 from code_trajectory.server import state, configure_project, _check_configured
 
 def test_explicit_configuration(temp_project_dir):
