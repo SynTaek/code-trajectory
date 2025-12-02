@@ -1,0 +1,225 @@
+# SPDX-License-Identifier: MIT
+from mcp.server.fastmcp import FastMCP
+import argparse
+import logging
+import os
+from .recorder import Recorder
+from .watcher import Watcher
+from .trajectory import Trajectory
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+# Global state
+class ServerState:
+    def __init__(self):
+        self.recorder: Recorder | None = None
+        self.watcher: Watcher | None = None
+        self.trajectory: Trajectory | None = None
+        self.project_path: str | None = None
+
+
+state = ServerState()
+
+# Initialize MCP Server
+mcp = FastMCP("code-trajectory")
+
+
+def _ensure_configured(path: str | None = None) -> str:
+    if path:
+        return _initialize_components(path)
+
+    if not state.recorder:
+        logger.info(
+            "Server not configured. Attempting to auto-configure with current working directory."
+        )
+        try:
+            return _initialize_components(os.getcwd())
+        except Exception as e:
+            raise RuntimeError(
+                f"Server not configured and auto-configuration failed: {e}. Please call 'configure_project' first."
+            )
+
+    return f"Server is configured to track: {state.project_path}"
+
+
+def _initialize_components(path: str) -> str:
+    target_path = os.path.abspath(path)
+    if not os.path.exists(target_path):
+        raise ValueError(f"Target path does not exist: {target_path}")
+
+    # Check if we are already watching this path
+    if state.watcher and state.project_path == target_path:
+        logger.info(f"Already watching {target_path}, skipping re-initialization.")
+        return f"Already configured to track: {target_path}"
+
+    # Stop existing watcher if any (different path)
+    if state.watcher:
+        state.watcher.stop()
+
+    try:
+        state.recorder = Recorder(target_path)
+        state.watcher = Watcher(target_path, state.recorder)
+        state.trajectory = Trajectory(state.recorder)
+        state.project_path = target_path
+
+        state.watcher.start()
+        logger.info(f"Initialized components for {target_path}")
+        return f"Successfully configured to track: {target_path}"
+    except Exception as e:
+        logger.error(f"Failed to initialize components: {e}")
+        raise RuntimeError(f"Failed to initialize: {e}")
+
+
+@mcp.tool()
+def configure_project(path: str) -> str:
+    """Configures the server to track a specific project path.
+
+    This tool is used to switch the active project being tracked. The server auto-configures
+    to the current working directory on startup, so this is optional for single-project workflows.
+
+    Args:
+        path: Path to the target project directory.
+
+    Returns:
+        A confirmation message indicating the server is configured.
+    """
+    return _ensure_configured(path)
+
+
+@mcp.tool()
+def get_file_trajectory(filepath: str, depth: int = 5) -> str:
+    """Retrieves the evolutionary trajectory of a specific file.
+
+    Use this tool before modifying a complex file to understand its recent history,
+    or to see the "flow" of changes leading up to the present.
+
+    Args:
+        filepath: Relative path to the file (e.g., "src/main.py").
+        depth: Number of recent snapshots to retrieve (default: 5).
+
+    Returns:
+        A markdown-formatted narrative of the file's history, including timestamps,
+        intents, and diff summaries. Reverts are annotated with `[Revert Detected]`.
+    """
+    _ensure_configured()
+    if state.trajectory is None:
+        raise RuntimeError("Server not configured")
+    return state.trajectory.get_file_trajectory(filepath, depth)
+
+
+@mcp.tool()
+def get_global_trajectory(time_window_minutes: int = 30) -> str:
+    """Retrieves the global trajectory (ripple effect) across the project.
+
+    Use this to understand the broader context of recent changes or to detect
+    ripple effects (e.g., "I changed User.py, did I also update UserTest.py?").
+
+    Args:
+        time_window_minutes: How far back to look in minutes (default: 30).
+
+    Returns:
+        A summary of modified files and their relationships, grouped by time and intent.
+    """
+    _ensure_configured()
+    if state.trajectory is None:
+        raise RuntimeError("Server not configured")
+    return state.trajectory.get_global_trajectory(time_window_minutes)
+
+
+@mcp.tool()
+def get_session_summary() -> str:
+    """Retrieves a summary of the last session and current context.
+
+    Use this at the beginning of a chat session to "catch up" on what happened
+    previously or to understand the last known state of the project.
+
+    Returns:
+        A summary of the last recorded session, including the final intent and modified files.
+    """
+    _ensure_configured()
+    if state.trajectory is None:
+        raise RuntimeError("Server not configured")
+    return state.trajectory.get_session_summary()
+
+
+@mcp.tool()
+def checkpoint(intent: str) -> str:
+    """Creates a checkpoint of the current state with a descriptive intent.
+
+    Use this after completing a logical unit of work to "save" your progress semantically.
+    This squashes recent [AUTO-TRJ] snapshots into a single commit.
+
+    Args:
+        intent: A clear, past-tense description of what was accomplished (e.g., "Refactored auth middleware").
+
+    Returns:
+        A success message indicating the checkpoint was created and how many snapshots were squashed.
+    """
+    _ensure_configured()
+    if state.recorder is None:
+        raise RuntimeError("Server not configured")
+    return state.recorder.checkpoint(intent)
+
+
+@mcp.tool()
+def set_trajectory_intent(intent: str) -> str:
+    """Sets the current coding intent.
+
+    Use this before starting a new task to contextualize "micro-commits".
+    The intent is appended to all [AUTO-TRJ] snapshots for the next 5 minutes.
+
+    Args:
+        intent: A short description of the task (e.g., "Debugging connection timeout").
+
+    Returns:
+        A confirmation message indicating the intent is set.
+    """
+    _ensure_configured()
+    if state.recorder is None:
+        raise RuntimeError("Server not configured")
+    state.recorder.set_intent(intent)
+    return f"Intent set to: '{intent}' (Valid for 5 minutes)"
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Code Trajectory MCP Server")
+    parser.add_argument("--path", help="Path to the target project to track (optional)")
+    args = parser.parse_args()
+
+    # Initial configuration
+    try:
+        # Check if git is available.
+        import shutil
+        if not shutil.which("git"):
+            logger.error("Git is not installed or not in PATH. Code Trajectory requires git.")
+            raise RuntimeError("Git is not installed or not in PATH.")
+
+        if args.path:
+            _ensure_configured(args.path)
+        else:
+            logger.info(
+                "No path provided, auto-configuring to current working directory."
+            )
+            _ensure_configured(os.getcwd())
+    except Exception as e:
+        logger.error(f"Startup configuration failed: {e}")
+        # We don't exit here, allowing the server to run.
+        # Tools will try to configure again if needed, or fail gracefully.
+
+    # Run server
+    try:
+        mcp.run()
+    except KeyboardInterrupt:
+        logger.info("Stopping server...")
+    finally:
+        if state.watcher:
+            state.watcher.stop()
+
+
+if __name__ == "__main__":
+    main()

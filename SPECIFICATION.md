@@ -1,0 +1,105 @@
+# Functional Specification: Code Trajectory MCP System
+
+## 1. System Overview
+The **Code Trajectory MCP System** acts as a bridge between a developer's local development environment and an LLM. It captures high-resolution temporal data (code edits) and processes this data into semantic context (intent/trajectory) for the LLM.
+
+## 2. Architecture Components
+
+### 2.1. The Watcher (Background Service)
+* **Role:** Monitors the file system for changes.
+* **Behavior:**
+    * **Auto-Start:** Starts automatically on server startup, watching the current working directory (or specified path).
+    * Triggers on `FileModified` events.
+    * **Debouncing:** Implements a debounce mechanism (e.g., 2.0 seconds) to prevent spamming snapshots during rapid typing/saving.
+    * **Scope:** Respects `.gitignore` rules to avoid tracking build artifacts or sensitive environment files.
+    * **Dynamic Config:** Can be re-configured to watch a different path at runtime via `configure_project` or `checkpoint`.
+
+### 2.2. The Recorder (Git Storage Layer)
+* **Role:** Persists the state of the code.
+* **Mechanism:** Uses a shadow git repository located in `.trajectory` within the project root.
+* **Isolation:** The main project's `.git` repository is NOT used. The `.trajectory` folder is automatically added to `.gitignore`.
+* **Commit Strategy:**
+    * Creates commits with a specific prefix: `[AUTO-TRJ]`.
+    * Includes a timestamp and a brief diff summary in the message if possible.
+    * **Intent Awareness:** If an intent is set via `set_trajectory_intent`, it is appended to the commit message (e.g., `[AUTO-TRJ] 12:00:00 - Refactoring - Snapshot...`).
+    * **Constraint:** Must handle `git.lock` contentions gracefully.
+
+### 2.3. The Provider (MCP Server Layer)
+* **Role:** Exposes tools to the LLM Client (e.g., Claude).
+* **Data Processing:** Converts raw `git diff` outputs into a structured, narrative format optimized for LLM token limits and reasoning.
+
+## 3. Detailed Functional Requirements
+
+### 3.1. Tool: `get_file_trajectory`
+**Goal:** Provide the evolutionary context of a single file.
+
+* **Input:**
+    * `filepath` (string, required): Relative path to the file.
+    * `depth` (integer, optional, default=5): Number of recent snapshots to retrieve.
+* **Processing:**
+    * Retrieve the last `N` commits affecting the file.
+    * Sort chronologically (Oldest → Newest).
+    * **Revert Detection:** Calculates content hashes for each snapshot. If a file's content matches a previous state in the history, it appends `**[Revert Detected]** (Matches state from <timestamp>)` to the message.
+* **Output:** Markdown formatted string containing timestamps, commit messages, and semantic diffs.
+
+### 3.2. Tool: `get_global_trajectory`
+**Goal:** Provide the broader context of the project (multi-file dependencies).
+
+* **Input:**
+    * `time_window_minutes` (integer, optional, default=30): How far back to look.
+* **Processing:**
+    * Identify all files modified within the time window.
+    * Group changes by file.
+    * Summarize the "Flow": e.g., "Modified `UserDTO` -> Modified `UserService` -> Modified `UserController`".
+* **Output:** A summary report showing the ripple effect of recent changes.
+
+### 3.3. Tool: `get_session_summary`
+**Goal:** Handle context switching.
+
+* **Logic:**
+    * Identify the "gap" in commit times. If the last commit was > 1 hour ago, treat the current interaction as a "New Session".
+    * Provide a summary of the *last* session's final state and intent.
+
+### 3.4. Tool: `checkpoint`
+**Goal:** Maintain repository hygiene and consolidate work.
+
+* **Input:**
+    * `intent` (string, required): Description of the work done (e.g., "Implemented login feature").
+* **Function:**
+    * Identifies contiguous `[AUTO-TRJ]` commits (including root commits if applicable).
+    * Squashes them into a single commit with the prefix `[CHECKPOINT]` and the provided intent.
+    * **Auto-Config:** If the server is not configured, it automatically configures to the current working directory.
+
+### 3.5. Tool: `set_trajectory_intent`
+**Goal:** Capture the "Why" behind the changes.
+
+* **Input:**
+    * `intent` (string, required): A short description of the current task (e.g., "Fixing bug #123").
+* **Processing:**
+    * Stores the intent in memory with a timestamp.
+    * **TTL:** The intent expires after 5 minutes to prevent stale context from polluting future snapshots.
+* **Effect:** Subsequent snapshots will include this intent in their commit messages.
+
+### 3.6. Tool: `configure_project`
+**Goal:** Set the target project path dynamically.
+
+* **Input:**
+    * `path` (string, required): Absolute path to the project to track.
+* **Processing:**
+    * Stops any existing Watcher.
+    * Initializes new Recorder and Watcher for the given path.
+    * **Optimization:** If already watching the target path, skips re-initialization to maintain continuity.
+* **Effect:** Starts tracking the new project.
+
+## 4. Edge Case Handling
+
+| Scenario | System Behavior |
+| :--- | :--- |
+| **Rapid Saving (Ctrl+S spam)** | The Debounce logic in the Watcher ensures only the final state after the delay is committed. |
+| **Compilation Error / Broken Code** | The system snapshots *everything*, even broken code. This is intentional, as the LLM needs to see "what broke" to fix it. |
+| **Branch Switching** | If the user switches branches externally, the Watcher must detect the new HEAD and continue tracking on the new branch without error. |
+| **Large Files** | Logic to truncate huge Diffs in the `get_trajectory` output to prevent exceeding LLM context windows. |
+
+## 5. Future Roadmap
+* **Test Status Integration:** Capture the output of a test runner (Pass/Fail) and append it to the trajectory metadata.
+* **Shadow Branch Strategy:** Instead of committing to the active branch, maintain a parallel `refs/heads/shadow/branch-name` to keep the user's history completely clean until explicit save.

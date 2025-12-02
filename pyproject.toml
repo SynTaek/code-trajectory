@@ -1,0 +1,31 @@
+[project]
+name = "code-trajectory"
+version = "0.1.0"
+authors = [
+    { name = "SynTaek", url = "https://github.com/SynTaek" }
+]
+description = "A Code Trajectory MCP server for tracking code evolution and providing context to LLMs."
+readme = "README.md"
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+]
+requires-python = ">=3.14"
+dependencies = [
+    "mcp",
+    "gitpython",
+    "watchdog",
+]
+
+[project.scripts]
+code-trajectory = "code_trajectory.server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+    "ruff>=0.14.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
