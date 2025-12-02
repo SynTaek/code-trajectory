@@ -50,7 +50,33 @@ def test_intent_persistence(recorder, temp_project_dir):
     commits = list(recorder.repo.iter_commits())
     assert len(commits) == 2
     assert "Persistent Task" in commits[0].message
+    assert "Persistent Task" in commits[0].message
     assert "Persistent Task" in commits[1].message
+
+def test_intent_persistence_after_checkpoint(recorder, temp_project_dir):
+    """Test that intent persists even after a checkpoint."""
+    recorder.set_intent("Long Running Task")
+    test_file = os.path.join(temp_project_dir, "test.txt")
+    
+    # 1. Create snapshot
+    with open(test_file, "w") as f:
+        f.write("v1")
+    recorder.create_snapshot(test_file)
+    
+    # 2. Checkpoint
+    recorder.checkpoint("Intermediate Save")
+    
+    # 3. Create another snapshot
+    with open(test_file, "w") as f:
+        f.write("v2")
+    recorder.create_snapshot(test_file)
+    
+    # Verify the new snapshot still has the intent
+    commits = list(recorder.repo.iter_commits())
+    # commits[0] is the new snapshot
+    # commits[1] is the checkpoint
+    assert "Long Running Task" in commits[0].message
+    assert "[AUTO-TRJ]" in commits[0].message
 
 def test_checkpoint(recorder, temp_project_dir):
     """Test squashing snapshots into a checkpoint."""
