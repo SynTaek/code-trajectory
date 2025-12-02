@@ -46,9 +46,11 @@ The **Code Trajectory MCP System** acts as a bridge between a developer's local 
 **Goal:** Provide the broader context of the project (multi-file dependencies).
 
 * **Input:**
-    * `time_window_minutes` (integer, optional, default=30): How far back to look.
+    * `limit` (integer, optional, default=20): Maximum number of recent snapshots to retrieve.
+    * `since_checkpoint` (boolean, optional, default=False): If True, retrieves all commits since the last checkpoint.
 * **Processing:**
-    * Identify all files modified within the time window.
+    * If `since_checkpoint` is True: Iterate backwards until a `[CHECKPOINT]` commit is found. Return all commits after it.
+    * Else: Return the last `limit` commits.
     * Group changes by file.
     * Summarize the "Flow": e.g., "Modified `UserDTO` -> Modified `UserService` -> Modified `UserController`".
 * **Output:** A summary report showing the ripple effect of recent changes.

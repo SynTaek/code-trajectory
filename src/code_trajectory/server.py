@@ -115,14 +115,16 @@ def get_file_trajectory(filepath: str, depth: int = 5) -> str:
 
 
 @mcp.tool()
-def get_global_trajectory(time_window_minutes: int = 30) -> str:
+def get_global_trajectory(limit: int = 20, since_checkpoint: bool = False) -> str:
     """Retrieves the global trajectory (ripple effect) across the project.
 
     Use this to understand the broader context of recent changes or to detect
     ripple effects (e.g., "I changed User.py, did I also update UserTest.py?").
 
     Args:
-        time_window_minutes: How far back to look in minutes (default: 30).
+        limit: Maximum number of commits to retrieve (default: 20).
+        since_checkpoint: If True, retrieves all commits since the last checkpoint.
+            This overrides the 'limit' argument.
 
     Returns:
         A summary of modified files and their relationships, grouped by time and intent.
@@ -131,7 +133,7 @@ def get_global_trajectory(time_window_minutes: int = 30) -> str:
     if error:
         return error
     assert state.trajectory is not None
-    return state.trajectory.get_global_trajectory(time_window_minutes)
+    return state.trajectory.get_global_trajectory(limit, since_checkpoint)
 
 
 @mcp.tool()

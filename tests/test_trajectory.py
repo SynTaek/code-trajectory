@@ -54,9 +54,21 @@ def test_get_global_trajectory(recorder, trajectory, temp_project_dir):
         f.write("f2")
     recorder.create_snapshot(file2)
     
-    global_traj = trajectory.get_global_trajectory(time_window_minutes=10)
-    assert "f1.py" in global_traj
+    # Test limit
+    global_traj = trajectory.get_global_trajectory(limit=1)
     assert "f2.py" in global_traj
+    assert "f1.py" not in global_traj
+
+    # Test since_checkpoint
+    recorder.checkpoint("Test Checkpoint")
+    
+    with open(file1, "w") as f:
+        f.write("f1_v2")
+    recorder.create_snapshot(file1)
+    
+    global_traj_checkpoint = trajectory.get_global_trajectory(since_checkpoint=True)
+    assert "f1.py" in global_traj_checkpoint
+    assert "f2.py" not in global_traj_checkpoint # f2 was before checkpoint
 
 def test_get_session_summary(recorder, trajectory, temp_project_dir):
     """Test session summary with gap detection."""

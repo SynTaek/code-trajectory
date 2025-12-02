@@ -97,28 +97,45 @@ class Trajectory:
 
         return "\n\n".join(trajectory)
 
-    def get_global_trajectory(self, time_window_minutes: int = 30) -> str:
+    def get_global_trajectory(self, limit: int = 20, since_checkpoint: bool = False) -> str:
         """Generates a global trajectory summary.
 
         Args:
-            time_window_minutes: Time window in minutes to look back.
+            limit: Maximum number of commits to retrieve (default: 20).
+            since_checkpoint: If True, retrieves all commits since the last checkpoint.
+                This overrides the 'limit' argument.
 
         Returns:
             A markdown-formatted summary of global activity.
         """
-        # Use git log --since to filter by time efficiently.
-        since_arg = f"{time_window_minutes} minutes ago"
-        
         try:
-            commits = list(self.recorder.repo.iter_commits(since=since_arg))
+            # Fetch commits. We fetch a bit more than limit if checking for checkpoint,
+            # but for simplicity in this iteration, we'll iterate from HEAD.
+            # If since_checkpoint is True, we need to iterate until we find a checkpoint.
+            
+            commits = []
+            if since_checkpoint:
+                # Iterate commits until we find a checkpoint or hit a reasonable safety limit (e.g. 1000)
+                for commit in self.recorder.repo.iter_commits(max_count=1000):
+                    message = str(commit.message)
+                    if message.startswith("[CHECKPOINT]"):
+                        break
+                    commits.append(commit)
+            else:
+                commits = list(self.recorder.repo.iter_commits(max_count=limit))
+
         except Exception as e:
             logger.error(f"Failed to fetch global trajectory: {e}")
             return f"Error fetching global trajectory: {e}"
 
         if not commits:
-            return f"No global activity in the last {time_window_minutes} minutes."
+            return "No global activity found."
 
-        trajectory = [f"# Global Trajectory (Last {time_window_minutes} min)"]
+        trajectory = []
+        if since_checkpoint:
+            trajectory.append("# Global Trajectory (Since Last Checkpoint)")
+        else:
+            trajectory.append(f"# Global Trajectory (Last {len(commits)} snapshots)")
 
         for commit in reversed(commits):
             timestamp = datetime.fromtimestamp(commit.committed_date).strftime(

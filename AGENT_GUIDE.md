@@ -25,7 +25,7 @@ This document provides detailed scenarios and system prompt rules to effectively
 ### Scenario 3: The "Ripple Effect" Check
 **Context:** You modified a core utility function in `utils.py`.
 1.  **Action:** You finish editing `utils.py`.
-2.  **Action:** Call `get_global_trajectory(time_window_minutes=10)`.
+2.  **Action:** Call `get_global_trajectory(limit=10)` or `get_global_trajectory(since_checkpoint=True)`.
 3.  **Insight:** You see that `user_service.py` and `product_service.py` were modified *before* your change, but haven't been touched since.
 4.  **Reasoning:** "I might have broken those services with my change to `utils.py`."
 5.  **Action:** You check those files and run tests.

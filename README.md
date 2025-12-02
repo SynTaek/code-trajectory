@@ -132,7 +132,7 @@ Use these tools to understand the codebase before making changes:
 
 *   **`get_session_summary()`**: Call this first when entering a session. It tells you what happened recently.
 *   **`get_file_trajectory(filepath)`**: Call this before editing a complex file. It shows you *how* the file evolved, not just its current state.
-*   **`get_global_trajectory()`**: Call this to see if your changes are causing ripple effects in other files.
+*   **`get_global_trajectory(limit=20, since_checkpoint=False)`**: Call this to see if your changes are causing ripple effects in other files. Use `since_checkpoint=True` to see all changes since your last checkpoint.
 
 ## 🗺️ Workflow Example
 
