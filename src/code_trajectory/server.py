@@ -51,8 +51,13 @@ def _initialize_components(path: str) -> str:
     if not os.path.exists(target_path):
         raise ValueError(f"Target path does not exist: {target_path}")
 
-    # Check if we are already watching this path
-    if state.watcher and state.project_path == target_path:
+    # Check if we are already watching this path AND the shadow repo exists
+    shadow_repo_path = os.path.join(target_path, ".trajectory")
+    if (
+        state.watcher
+        and state.project_path == target_path
+        and os.path.exists(shadow_repo_path)
+    ):
         logger.info(f"Already watching {target_path}, skipping re-initialization.")
         return f"Already configured to track: {target_path}"
 
