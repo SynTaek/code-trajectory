@@ -102,8 +102,6 @@ git init
   * **Claude Desktop:** `claude_desktop_config.json`
   * **Cursor / 기타 IDE:** `settings.json` (또는 "MCP Servers" 설정 메뉴)
 
-<!-- end list -->
-
 ```json
 "mcpServers": {
     "code-trajectory": {
@@ -116,6 +114,18 @@ git init
     }
 }
 ```
+
+### 4. AI 시스템 지침 설정 (권장 사항)
+
+AI가 Code Trajectory를 자율적이고 효과적으로 사용하게 하려면, 도구 사용법이 담긴 운영 규칙을 입력해줘야 합니다.
+
+1.  이 저장소에 있는 **[`AGENT_GUIDE.md`](AGENT_GUIDE.md)** 파일의 전체 내용을 복사하세요.
+2.  AI의 커스텀 지침(Custom Instructions)이나 시스템 프롬프트에 붙여넣으세요:
+    * **Cursor:** 프로젝트 루트의 `.cursorrules` 파일에 추가하거나 새로 생성하세요.
+    * **Claude Projects:** "Project Instructions" 란에 추가하세요.
+    * **일반 LLM:** "System Prompt" 또는 "Custom Instructions" 설정에 추가하세요.
+
+> **팁:** 이 가이드는 AI에게 언제 궤적을 조회해야 하는지, 언제 히스토리를 통합(Consolidate)해야 하는지 알려주어 AI를 단순한 도구에서 '능동적인 코딩 파트너'로 변화시킵니다.
 
 -----
 

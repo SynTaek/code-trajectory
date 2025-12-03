@@ -113,6 +113,18 @@ git init
 }
 ```
 
+### 4. Setup AI Instructions (Recommended)
+
+To ensure the AI uses Code Trajectory autonomously and effectively, you must provide it with the operational guidelines.
+
+1.  Copy the full content of **[`AGENT_GUIDE.md`](AGENT_GUIDE.md)** from this repository.
+2.  Paste it into your AI's custom instructions or system prompt:
+    * **Cursor:** Create or append to the `.cursorrules` file in your project root.
+    * **Claude Projects:** Add to "Project Instructions".
+    * **General LLMs:** Add to the "System Prompt" or "Custom Instructions".
+
+> **Tip:** This guide teaches the AI when to query the trajectory and how to consolidate history, ensuring it acts as a proactive coding partner.
+
 -----
 
 ## 🤖 Agent Workflow Guide
