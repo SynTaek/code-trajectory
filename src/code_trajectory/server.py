@@ -205,9 +205,6 @@ def set_trajectory_intent(intent: str) -> str:
 
 
 
-    def __getattr__(self, name):
-        return getattr(self.buffer, name)
-
 
 class BytesStdinWrapper:
     """
@@ -242,6 +239,33 @@ class BytesStdinWrapper:
         for line in self.buffer:
             yield line.replace(b'\r', b'')
 
+    def flush(self):
+        self.buffer.flush()
+    
+    def close(self):
+        self.buffer.close()
+    
+    @property
+    def closed(self):
+        return self.buffer.closed
+
+    def __getattr__(self, name):
+        return getattr(self.buffer, name)
+
+
+class BytesStdoutWrapper:
+    """
+    Wraps stdout.buffer to ensure consistent line endings (LF) across platforms.
+    Specifically replaces b'\r\n' with b'\n' to prevent "invalid trailing data" errors on clients.
+    """
+    def __init__(self, buffer):
+        self.buffer = buffer
+
+    def write(self, data):
+        # Replace CRLF with LF
+        if b'\r\n' in data:
+            data = data.replace(b'\r\n', b'\n')
+        return self.buffer.write(data)
 
     def flush(self):
         self.buffer.flush()
@@ -288,18 +312,30 @@ def main():
         # We need to ensure we are wrapping the underlying buffer
         if hasattr(sys.stdin, 'buffer'):
             # Create a wrapper around the original buffer
-            wrapped_buffer = BytesStdinWrapper(sys.stdin.buffer)
+            wrapped_stdin = BytesStdinWrapper(sys.stdin.buffer)
             # Replace sys.stdin with a new TextIOWrapper using our wrapped buffer
-            # This ensures that both direct buffer access (via sys.stdin.buffer) 
-            # and text access (via sys.stdin) use our sanitizer.
             sys.stdin = io.TextIOWrapper(
-                wrapped_buffer, 
+                wrapped_stdin, 
                 encoding=sys.stdin.encoding, 
                 errors=sys.stdin.errors,
                 line_buffering=sys.stdin.line_buffering
             )
-            logger.info("Windows CRLF fix applied: wrapped sys.stdin.buffer")
-            sys.stderr.write("DEBUG: Code Trajectory Server with Windows CRLF fix started.\n")
+            
+            # Also wrap stdout to ensure LF only output
+            if hasattr(sys.stdout, 'buffer'):
+                wrapped_stdout = BytesStdoutWrapper(sys.stdout.buffer)
+                # We can't set sys.stdout.buffer directly (read-only).
+                # Instead, we replace sys.stdout with a new TextIOWrapper that wraps our buffer.
+                # This ensures sys.stdout.buffer points to our wrapper.
+                sys.stdout = io.TextIOWrapper(
+                    wrapped_stdout,
+                    encoding=sys.stdout.encoding,
+                    errors=sys.stdout.errors,
+                    line_buffering=sys.stdout.line_buffering
+                )
+            
+            logger.info("Windows CRLF fix applied: wrapped sys.stdin.buffer and sys.stdout.buffer")
+            sys.stderr.write("DEBUG: Code Trajectory Server with Windows CRLF fix (Input+Output) started.\n")
             sys.stderr.flush()
         else:
             logger.warning("sys.stdin has no buffer attribute, cannot apply CRLF fix.")
